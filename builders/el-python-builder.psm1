@@ -16,7 +16,7 @@ class EnterpriseLinuxPythonBuilder : NixPythonBuilder {
 
     #>
 
-    UbuntuPythonBuilder(
+    EnterpriseLinuxPythonBuilder(
         [semver] $version,
         [string] $architecture,
         [string] $platform

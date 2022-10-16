@@ -63,7 +63,7 @@ function Get-PythonBuilder {
         $builder = [UbuntuPythonBuilder]::New($Version, $Architecture, $Platform)
     } elseif ($Platform -match 'darwin') {
         $builder = [macOSPythonBuilder]::New($Version, $Architecture, $Platform)
-    } elseif ($Platform -match 'el') {
+    } elseif ($Platform -like 'el*') {
         $builder = [EnterpriseLinuxPythonBuilder]::New($Version, $Architecture, $Platform)
     } else {
         Write-Host "##vso[task.logissue type=error;] Invalid platform: $Platform"
@@ -74,5 +74,5 @@ function Get-PythonBuilder {
 }
 
 ### Create Python builder instance, and build artifact
-$Builder = Get-PythonBuilder -Version $Version -Architecture $Architecture -Platform $Platform 
+$Builder = Get-PythonBuilder -Version $Version -Architecture $Architecture -Platform $Platform
 $Builder.Build()
