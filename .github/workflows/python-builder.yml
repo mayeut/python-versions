@@ -115,9 +115,27 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.generate_matrix.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     env:
       ARTIFACT_NAME: python-${{ github.event.inputs.VERSION || '3.9.9' }}-${{ matrix.platform }}-${{ matrix.arch }}
     steps:
+
+      - name: Container Dependencies
+        if: matrix.container != ''
+        run: |
+          yum -y update
+          yum install -y bzip2 curl expat gdbm keyutils-libs libcom_err libcurl libdb libkadm5 libpcap libffi libidn ncurses openssl readline sqlite tk uuid xz zlib
+          curl -fsSL https://rpm.nodesource.com/setup_16.x | bash -
+          yum install -y nodejs
+          yum install -y https://github.com/PowerShell/PowerShell/releases/download/v7.2.6/powershell-lts-7.2.6-1.rh.x86_64.rpm
+          yum install -y install centos-release-scl
+          yum install -y rh-git227-git
+          echo "#/bin/bash" > /usr/local/bin/git
+          echo "source /opt/rh/rh-git227/enable" >> /usr/local/bin/git
+          echo 'git "$@"' >> /usr/local/bin/git
+          chmod +x /usr/local/bin/git
+          echo "RUNNER_TOOL_CACHE=/opt/hostedtoolcache" >> $GITHUB_ENV
+        shell: bash
 
       - name: Check out repository code
         uses: actions/checkout@v2
