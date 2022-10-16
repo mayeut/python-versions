@@ -89,6 +89,7 @@ jobs:
           echo "source /opt/rh/rh-git227/enable" >> /usr/local/bin/git
           echo 'git "$@"' >> /usr/local/bin/git
           chmod +x /usr/local/bin/git
+          echo "RUNNER_TOOL_CACHE=/opt/hostedtoolcache" >> $GITHUB_ENV
         shell: bash
 
       - name: Check out repository code
