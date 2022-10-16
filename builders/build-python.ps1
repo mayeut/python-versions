@@ -1,6 +1,7 @@
 using module "./win-python-builder.psm1"
 using module "./ubuntu-python-builder.psm1"
 using module "./macos-python-builder.psm1"
+using module "./el-python-builder.psm1"
 
 <#
 .SYNOPSIS
@@ -62,6 +63,8 @@ function Get-PythonBuilder {
         $builder = [UbuntuPythonBuilder]::New($Version, $Architecture, $Platform)
     } elseif ($Platform -match 'darwin') {
         $builder = [macOSPythonBuilder]::New($Version, $Architecture, $Platform)
+    } elseif ($Platform -match 'el') {
+        $builder = [EnterpriseLinuxPythonBuilder]::New($Version, $Architecture, $Platform)
     } else {
         Write-Host "##vso[task.logissue type=error;] Invalid platform: $Platform"
         exit 1

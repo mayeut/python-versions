@@ -14,7 +14,7 @@ on:
       PLATFORMS:
         description: 'Platforms for execution in "os" or "os_arch" format (arch is "x64" by default)'
         required: true
-        default: 'ubuntu-18.04,ubuntu-20.04,ubuntu-22.04,macos-10.15,windows-2019_x64,windows-2019_x86'
+        default: 'ubuntu-18.04,ubuntu-20.04,ubuntu-22.04,macos-10.15,windows-2019_x64,windows-2019_x86,el7'
   pull_request:
     paths-ignore:
     - 'versions-manifest.json'
@@ -46,14 +46,20 @@ jobs:
             $os = $parts[0]
             $arch = if ($parts[1]) {$parts[1]} else {"x64"}
             switch -wildcard ($os) {
+              "el*" { $platform=$os; $os = "ubuntu-latest" }
               "*ubuntu*" { $platform = $os.Replace("ubuntu","linux")}
               "*macos*" { $platform = 'darwin' }
               "*windows*" { $platform = 'win32' }
+            }
+            $container = ""
+            switch ($platform) {
+              "el7" { $container="centos:7" }
             }
             $matrix += @{
               'platform' = $platform
               'os' = $os
               'arch' = $arch
+              'container' = $container
             }
           }
           echo "::set-output name=matrix::$($matrix | ConvertTo-Json -Compress)"
@@ -65,9 +71,25 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.generate_matrix.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     env:
       ARTIFACT_NAME: python-${{ github.event.inputs.VERSION || '3.9.9' }}-${{ matrix.platform }}-${{ matrix.arch }}
     steps:
+      - name: Container Dependencies
+        if: matrix.container != ''
+        run: |
+          yum -y update
+          yum install -y bzip2-devel curl curl-devel expat-devel gdbm-devel gcc gcc-c++ glibc-devel kernel-headers keyutils-libs-devel krb5-devel libcom_err-devel libdb-devel libffi-devel libidn-devel libpcap-devel libstdc++-devel make ncurses-devel openssl-devel readline-devel sqlite-devel tk-devel uuid-devel xz-devel zlib-devel
+          curl -fsSL https://rpm.nodesource.com/setup_16.x | bash -
+          yum install -y nodejs
+          yum install -y https://github.com/PowerShell/PowerShell/releases/download/v7.2.6/powershell-lts-7.2.6-1.rh.x86_64.rpm
+          yum install -y install centos-release-scl
+          yum install -y rh-git227-git
+          echo "#/bin/bash" > /usr/local/bin/git
+          echo "source /opt/rh/rh-git227/enable" >> /usr/local/bin/git
+          echo 'git "$@"' >> /usr/local/bin/git
+          chmod +x /usr/local/bin/git
+        shell: bash
 
       - name: Check out repository code
         uses: actions/checkout@v2
