@@ -28,6 +28,8 @@ class UbuntuPythonBuilder : NixPythonBuilder {
         Execute configure script with required parameters.
         #>
 
+        $archParts = $this.Architecture.Split("-")
+
         $pythonBinariesLocation = $this.GetFullPythonToolcacheLocation()
 
         ### To build Python with SO we must pass full path to lib folder to the linker
@@ -35,7 +37,15 @@ class UbuntuPythonBuilder : NixPythonBuilder {
         $configureString = "./configure"
         $configureString += " --prefix=$pythonBinariesLocation"
         $configureString += " --enable-shared"
-        $configureString += " --enable-optimizations"
+        if ($archParts.contains("nogil")) {
+            # https://github.com/python/cpython/issues/118846
+            # don't enable optimizations for now
+            $configureString += " --disable-gil"
+        }
+        else {
+            $configureString += " --enable-optimizations"
+        }
+
 
         ### Compile with support of loadable sqlite extensions.
         ### Link to documentation (https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.enable_load_extension)
