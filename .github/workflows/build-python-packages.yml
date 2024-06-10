@@ -183,17 +183,6 @@ jobs:
           pattern: python-*
           merge-multiple: true
 
-      - name: Publish Release ${{ env.VERSION }}
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.VERSION }}-${{ github.run_id }}
-          release_name: ${{ env.VERSION }}
-          body: |
-            Python ${{ env.VERSION }}
-
       - name: Generate hash for packages
         run: |
           $childItems = Get-Childitem -Path '.'
@@ -204,41 +193,22 @@ jobs:
             $hashString = "$actualHash $($packageObj.Name)"
             Write-Host "$hashString"
             Add-Content -Path ./hashes.sha256 -Value "$hashString"
-          } 
-  
+          }
+
       - name: Upload release assets
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
+            const { createHash } = require('node:crypto');
             for (let artifactDir of fs.readdirSync('.')) {
+              const hash = createHash('sha256');
               let artifactName = fs.lstatSync(artifactDir).isDirectory() ? fs.readdirSync(`${artifactDir}`)[0] : artifactDir;
-  
-              console.log(`Upload ${artifactName} asset`);
-              github.rest.repos.uploadReleaseAsset({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: ${{ steps.create_release.outputs.id }},
-                name: artifactName,
-                data: fs.lstatSync(artifactDir).isDirectory() ? fs.readFileSync(`./${artifactDir}/${artifactName}`) : fs.readFileSync(`./${artifactName}`).toString()
-              });
-            }
 
-  trigger_pr:
-    name: Trigger "Create Pull Request" workflow
-    needs: publish_release
-    runs-on: ubuntu-latest
-    steps:
-    - name: Trigger "Create Pull Request" workflow
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          github.rest.actions.createWorkflowDispatch({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'create-pr.yml',
-            ref: 'main'
-          });
+              console.log(`Upload ${artifactName} asset`);
+              let data = fs.lstatSync(artifactDir).isDirectory() ? fs.readFileSync(`./${artifactDir}/${artifactName}`) : fs.readFileSync(`./${artifactName}`).toString()
+              console.log(typeof data)
+              hash.update(data)
+              console.log(hash.digest('hex'));
+            }
 
