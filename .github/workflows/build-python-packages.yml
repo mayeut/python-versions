@@ -204,10 +204,11 @@ jobs:
             const { createHash } = require('node:crypto');
             for (let artifactDir of fs.readdirSync('.')) {
               const hash = createHash('sha256');
-              let artifactName = fs.lstatSync(artifactDir).isDirectory() ? fs.readdirSync(`${artifactDir}`)[0] : artifactDir;
-
-              console.log(`Upload ${artifactName} asset`);
-              let data = fs.lstatSync(artifactDir).isDirectory() ? fs.readFileSync(`./${artifactDir}/${artifactName}`) : fs.readFileSync(`./${artifactName}`).toString()
+              const isDirectory = fs.lstatSync(artifactDir).isDirectory();
+              let artifactName = isDirectory ? fs.readdirSync(`${artifactDir}`)[0] : artifactDir;
+              let artifactPath = isDirectory ? `./${artifactDir}/${artifactName}` : `./${artifactName}`
+              console.log(`Upload ${artifactName} asset from ${artifactPath}`);
+              let data = fs.readFileSync(artifactPath)
               console.log(typeof data)
               hash.update(data)
               console.log(hash.digest('hex'));
