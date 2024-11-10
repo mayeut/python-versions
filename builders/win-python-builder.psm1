@@ -25,13 +25,25 @@ class WinPythonBuilder : PythonBuilder {
     [string] $InstallationTemplateName
     [string] $InstallationScriptName
     [string] $OutputArtifactName
+    [bool] $UseNuGet
 
     WinPythonBuilder(
         [semver] $version,
         [string] $architecture,
         [string] $platform
     ) : Base($version, $architecture, $platform) {
-        $this.InstallationTemplateName = "win-setup-template.ps1"
+        if ($this.IsFreeThreaded()) {
+            $this.UseNuGet = $true
+        }
+        else {
+            $this.UseNuGet = $false
+        }
+        if ($this.UseNuGet) {
+            $this.InstallationTemplateName = "win-nuget-template.ps1"
+        }
+        else {
+            $this.InstallationTemplateName = "win-setup-template.ps1"
+        }
         $this.InstallationScriptName = "setup.ps1"
         $this.OutputArtifactName = "python-$Version-$Platform-$Architecture.zip"
     }
@@ -39,7 +51,7 @@ class WinPythonBuilder : PythonBuilder {
     [string] GetPythonExtension() {
         <#
         .SYNOPSIS
-        Return extension for required version of Python executable. 
+        Return extension for required version of Python executable.
         #>
 
         $extension = if ($this.Version -lt "3.5" -and $this.Version -ge "2.5") { ".msi" } else { ".exe" }
@@ -50,7 +62,7 @@ class WinPythonBuilder : PythonBuilder {
     [string] GetArchitectureExtension() {
         <#
         .SYNOPSIS
-        Return architecture suffix for Python executable. 
+        Return architecture suffix for Python executable.
         #>
 
         $ArchitectureExtension = ""
@@ -84,19 +96,39 @@ class WinPythonBuilder : PythonBuilder {
         return $uri
     }
 
-    [string] Download() {
+    [string] GetNuGetPackageName() {
+        $packageName = "python"
+        $arch = $this.GetHardwareArchitecture()
+        if ($arch -ne "x64") {
+            $packageName = "${packageName}${arch}"
+        }
+        if ($this.IsFreeThreaded()) {
+            $packageName = "${packageName}-freethreaded"
+        }
+        return $packageName
+    }
+
+    [void] Download() {
         <#
         .SYNOPSIS
         Download Python installation executable into artifact location.
         #>
-
-        $sourceUri = $this.GetSourceUri()
-
-        Write-Host "Sources URI: $sourceUri"
-        $sourcesLocation = Download-File -Uri $sourceUri -OutputFolder $this.WorkFolderLocation
-        Write-Debug "Done; Sources location: $sourcesLocation"
-
-        return $sourcesLocation
+        if ($this.UseNuGet) {
+            $packageName = $this.GetNuGetPackageName()
+            $version = $this.Version
+            $tempDir = Join-Path -Path $this.WorkFolderLocation -ChildPath "Temp"
+            $versionDir = Join-Path -Path $tempDir -ChildPath "${packageName}.${version}"
+            $toolsDir = Join-Path -Path $versionDir -ChildPath "tools"
+            Install-Package -ProviderName "NuGet" -Name $packageName -RequiredVersion $this.Version -Destination $tempDir -Confirm:$false -Force
+            Move-Item -Path "${toolsDir}\*" -Destination $this.WorkFolderLocation
+            Remove-Item -Path $tempDir -Force -Recurse
+        }
+        else {
+            $sourceUri = $this.GetSourceUri()
+            Write-Host "Sources URI: $sourceUri"
+            $sourcesLocation = Download-File -Uri $sourceUri -OutputFolder $this.WorkFolderLocation
+            Write-Debug "Done; Sources location: $sourcesLocation"
+        }
     }
 
     [void] CreateInstallationScript() {
@@ -105,8 +137,13 @@ class WinPythonBuilder : PythonBuilder {
         Create Python artifact installation script based on specified template.
         #>
 
-        $sourceUri = $this.GetSourceUri()
-        $pythonExecName = [IO.path]::GetFileName($sourceUri.AbsoluteUri)
+        if ($this.UseNuGet) {
+            $pythonExecName = ""
+        }
+        else {
+            $sourceUri = $this.GetSourceUri()
+            $pythonExecName = [IO.path]::GetFileName($sourceUri.AbsoluteUri)
+        }
         $installationTemplateLocation = Join-Path -Path $this.InstallationTemplatesLocation -ChildPath $this.InstallationTemplateName
         $installationTemplateContent = Get-Content -Path $installationTemplateLocation -Raw
         $installationScriptLocation = New-Item -Path $this.WorkFolderLocation -Name $this.InstallationScriptName -ItemType File
