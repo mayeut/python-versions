@@ -31,7 +31,7 @@ class UbuntuPythonBuilder : NixPythonBuilder {
         $pythonBinariesLocation = $this.GetFullPythonToolcacheLocation()
 
         ### To build Python with SO, passing relative path W.r.t to the binary location.
-        $env:LDFLAGS="-Wl,-rpath='`$`$ORIGIN/../lib'"
+        $env:LIBS = "-Wl,--enable-new-dtags,-rpath='`$`$ORIGIN/../lib'"
         $configureString = "./configure"
         $configureString += " --prefix=$pythonBinariesLocation"
         $configureString += " --enable-shared"
@@ -43,7 +43,7 @@ class UbuntuPythonBuilder : NixPythonBuilder {
 
         Write-Host "The passed configure options are: "
         Write-Host $configureString
-        Write-Host "LDFLAGS: $env:LDFLAGS"
+        Write-Host "LIBS: $env:LIBS"
 
         Execute-Command -Command $configureString
     }
