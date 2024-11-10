@@ -94,7 +94,9 @@ Describe "Tests" {
         It "Check if shared libraries are linked correctly" {
             "bash ./sources/psutil-install-test.sh" | Should -ReturnZeroExitCode
         }
+    }
 
+    if (($Platform -match "ubuntu") -or ($Platform -match "linux")) {
         It "Relocatable Python" {
             $semversion = [semver] $Version
             $pyfilename = "python$($semversion.Major).$($semversion.Minor)"
