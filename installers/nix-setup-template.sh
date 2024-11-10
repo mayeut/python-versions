@@ -24,9 +24,12 @@ echo "Check if Python hostedtoolcache folder exist..."
 if [ ! -d $PYTHON_TOOLCACHE_PATH ]; then
     echo "Creating Python hostedtoolcache folder..."
     mkdir -p $PYTHON_TOOLCACHE_PATH
-elif [ -d $PYTHON_TOOLCACHE_VERSION_PATH ]; then
-    echo "Deleting Python $PYTHON_FULL_VERSION"
-    rm -rf $PYTHON_TOOLCACHE_VERSION_PATH
+elif [ -d $PYTHON_TOOLCACHE_VERSION_ARCH_PATH ]; then
+    echo "Deleting Python $PYTHON_FULL_VERSION $ARCH"
+    rm -rf $PYTHON_TOOLCACHE_VERSION_ARCH_PATH
+    if [ -f $PYTHON_TOOLCACHE_VERSION_PATH/$ARCH.complete ]; then
+      rm -f $PYTHON_TOOLCACHE_VERSION_PATH/$ARCH.complete
+    fi
 fi
 
 echo "Create Python $PYTHON_FULL_VERSION folder"
